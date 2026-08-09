@@ -1,0 +1,62 @@
+// ============================================================================
+// NexusPOS — Prisma Schema
+// This is the single source of truth for the database structure.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Application role enum — single role per user (MVP).
+// Migrate to a join table when multi-role becomes a real requirement.
+// ---------------------------------------------------------------------------
+enum Role {
+  OWNER
+  ADMIN
+  CASHIER
+}
+
+// ---------------------------------------------------------------------------
+// User — authentication + profile data.
+// passwordHash is nullable to support future OAuth-only accounts.
+// ---------------------------------------------------------------------------
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?  @map("password_hash")
+  role         Role     @default(CASHIER)
+  isActive     Boolean  @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions RefreshToken[]
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// RefreshToken — doubles as the active session record.
+// sessionId in the JWT payload is this record's id.
+// tokenHash stores sha256(refreshToken) — never the raw token.
+// ---------------------------------------------------------------------------
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  replacedBy String?  @map("replaced_by") // id of the rotated successor — reuse detection
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}

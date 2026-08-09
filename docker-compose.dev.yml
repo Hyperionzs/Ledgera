@@ -1,0 +1,44 @@
+# ============================================================================
+# NexusPOS — Docker Compose Development Override
+# ============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# This starts only the database (and optionally pgAdmin).
+# Run frontend and backend locally with `pnpm dev` for hot-reload.
+# ============================================================================
+
+services:
+  postgres:
+    ports:
+      - '5432:5432'
+
+  # --------------------------------------------------------------------------
+  # pgAdmin — Database management UI (dev only)
+  # --------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexuspos-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nexuspos.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - '5050:80'
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # Disable backend and frontend in dev mode — run them locally
+  backend:
+    profiles:
+      - production
+  frontend:
+    profiles:
+      - production
+
+volumes:
+  pgadmin_data:
+    driver: local

@@ -1,0 +1,136 @@
+# ============================================================================
+# NexusPOS — CI Pipeline
+# ============================================================================
+# Runs on every push to main and on all pull requests.
+# Stages: Install → Lint & Format → Typecheck → Build
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '11'
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Stage 1: Lint, Format, and Typecheck
+  # --------------------------------------------------------------------------
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Generate Prisma client
+        run: pnpm --filter @nexuspos/backend run db:generate
+
+      - name: Typecheck shared
+        run: pnpm --filter @nexuspos/shared run typecheck
+
+      - name: Typecheck backend
+        run: pnpm --filter @nexuspos/backend run typecheck
+
+      - name: Typecheck frontend
+        run: pnpm --filter @nexuspos/frontend run typecheck
+
+  # --------------------------------------------------------------------------
+  # Stage 2: Build
+  # --------------------------------------------------------------------------
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @nexuspos/backend run db:generate
+
+      - name: Build backend
+        run: pnpm --filter @nexuspos/backend run build
+
+      - name: Build frontend
+        run: pnpm --filter @nexuspos/frontend run build
+
+      - name: Upload frontend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: apps/frontend/dist
+          retention-days: 7
+
+  # --------------------------------------------------------------------------
+  # Stage 3: Docker Build Verification
+  # --------------------------------------------------------------------------
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate lockfile for Docker
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend Docker image
+        run: docker build -f apps/backend/Dockerfile -t nexuspos-backend:ci .
+
+      - name: Build frontend Docker image
+        run: docker build -f apps/frontend/Dockerfile -t nexuspos-frontend:ci .
