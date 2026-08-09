@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'crypto';
 import type { SignOptions } from 'jsonwebtoken';
 import { Role } from '@ledgera/shared';
 import { Role as PrismaRole } from '@prisma/client';
@@ -183,7 +184,7 @@ export class AuthService {
     const successor = await this.prisma.refreshToken.create({
       data: {
         userId: user.id,
-        tokenHash: 'pending',
+        tokenHash: randomUUID(),
         expiresAt: new Date(Date.now() + this.refreshTtlMs()),
       },
     });
@@ -209,7 +210,7 @@ export class AuthService {
     const session = await this.prisma.refreshToken.create({
       data: {
         userId,
-        tokenHash: 'pending',
+        tokenHash: randomUUID(),
         expiresAt: new Date(Date.now() + this.refreshTtlMs()),
       },
     });

@@ -1,6 +1,6 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { Role } from '@ledgera/shared';
+import { IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
 
+/** Profile update only — role and status have dedicated endpoints. */
 export class UpdateUserDto {
   @IsOptional()
   @IsEmail()
@@ -11,11 +11,4 @@ export class UpdateUserDto {
   @IsString()
   @MaxLength(255)
   name?: string;
-
-  @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
-
-  @IsOptional()
-  isActive?: boolean;
 }
