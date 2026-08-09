@@ -1,9 +1,9 @@
-import type { ApiError } from '@nexuspos/shared';
+import type { ApiError } from '@ledgera/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 /**
- * Type-safe fetch wrapper for the NexusPOS API.
+ * Type-safe fetch wrapper for the Ledgera API.
  * Handles base URL, headers, and error parsing.
  */
 export async function apiClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

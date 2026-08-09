@@ -1,5 +1,5 @@
 # ============================================================================
-# NexusPOS — Docker Compose (Production-like)
+# Ledgera — Docker Compose (Production-like)
 # ============================================================================
 # Usage:
 #   docker compose up -d            # Start all services
@@ -13,18 +13,18 @@ services:
   # --------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: nexuspos-db
+    container_name: ledgera-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: nexuspos
-      POSTGRES_PASSWORD: nexuspos_dev
-      POSTGRES_DB: nexuspos_dev
+      POSTGRES_USER: ledgera
+      POSTGRES_PASSWORD: ledgera_dev
+      POSTGRES_DB: ledgera_dev
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U nexuspos -d nexuspos_dev']
+      test: ['CMD-SHELL', 'pg_isready -U ledgera -d ledgera_dev']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,14 +37,14 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-    container_name: nexuspos-api
+    container_name: ledgera-api
     restart: unless-stopped
     ports:
       - '3000:3000'
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://nexuspos:nexuspos_dev@postgres:5432/nexuspos_dev?schema=public
+      DATABASE_URL: postgresql://ledgera:ledgera_dev@postgres:5432/ledgera_dev?schema=public
       CORS_ORIGIN: http://localhost
       JWT_SECRET: change-this-in-production
       JWT_EXPIRATION: 7d
@@ -59,7 +59,7 @@ services:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
-    container_name: nexuspos-web
+    container_name: ledgera-web
     restart: unless-stopped
     ports:
       - '80:80'

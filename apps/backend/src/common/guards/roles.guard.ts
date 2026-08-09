@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@nexuspos/shared';
+import { Role } from '@ledgera/shared';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
 /**

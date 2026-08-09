@@ -12,7 +12,7 @@ export const PAGINATION = {
 
 /** Application metadata */
 export const APP = {
-  NAME: 'NexusPOS',
+  NAME: 'Ledgera',
   VERSION: '0.0.1',
   API_PREFIX: '/api/v1',
   DESCRIPTION: 'Modern web-based Point of Sale system',

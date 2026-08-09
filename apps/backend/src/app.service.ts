@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { APP } from '@nexuspos/shared';
+import { APP } from '@ledgera/shared';
 
 @Injectable()
 export class AppService {

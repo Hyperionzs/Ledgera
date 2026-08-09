@@ -1,5 +1,5 @@
 # ============================================================================
-# NexusPOS — CI Pipeline
+# Ledgera — CI Pipeline
 # ============================================================================
 # Runs on every push to main and on all pull requests.
 # Stages: Install → Lint & Format → Typecheck → Build
@@ -49,16 +49,16 @@ jobs:
         run: pnpm format:check
 
       - name: Generate Prisma client
-        run: pnpm --filter @nexuspos/backend run db:generate
+        run: pnpm --filter @ledgera/backend run db:generate
 
       - name: Typecheck shared
-        run: pnpm --filter @nexuspos/shared run typecheck
+        run: pnpm --filter @ledgera/shared run typecheck
 
       - name: Typecheck backend
-        run: pnpm --filter @nexuspos/backend run typecheck
+        run: pnpm --filter @ledgera/backend run typecheck
 
       - name: Typecheck frontend
-        run: pnpm --filter @nexuspos/frontend run typecheck
+        run: pnpm --filter @ledgera/frontend run typecheck
 
   # --------------------------------------------------------------------------
   # Stage 2: Build
@@ -86,13 +86,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm --filter @nexuspos/backend run db:generate
+        run: pnpm --filter @ledgera/backend run db:generate
 
       - name: Build backend
-        run: pnpm --filter @nexuspos/backend run build
+        run: pnpm --filter @ledgera/backend run build
 
       - name: Build frontend
-        run: pnpm --filter @nexuspos/frontend run build
+        run: pnpm --filter @ledgera/frontend run build
 
       - name: Upload frontend artifacts
         uses: actions/upload-artifact@v4
@@ -130,7 +130,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build backend Docker image
-        run: docker build -f apps/backend/Dockerfile -t nexuspos-backend:ci .
+        run: docker build -f apps/backend/Dockerfile -t ledgera-backend:ci .
 
       - name: Build frontend Docker image
-        run: docker build -f apps/frontend/Dockerfile -t nexuspos-frontend:ci .
+        run: docker build -f apps/frontend/Dockerfile -t ledgera-frontend:ci .

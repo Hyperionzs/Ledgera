@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiError } from '@nexuspos/shared';
+import { ApiError } from '@ledgera/shared';
 
 /**
  * Global exception filter — normalizes every error into the shared ApiError shape.

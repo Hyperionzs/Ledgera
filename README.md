@@ -1,8 +1,8 @@
-# 🏪 NexusPOS
+# 🏪 Ledgera
 
 > Modern web-based Point of Sale system for small and medium businesses.
 
-[![CI](https://github.com/your-org/nexuspos/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/nexuspos/actions/workflows/ci.yml)
+[![CI](https://github.com/your-org/ledgera/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/ledgera/actions/workflows/ci.yml)
 [![Node.js](https://img.shields.io/badge/Node.js-22_LTS-339933?logo=node.js)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -26,7 +26,7 @@
 │                            │               │                │
 │   ┌────────────────────┐   │   ┌───────────▼────────────┐   │
 │   │  Shared Package    │   │   │     PostgreSQL 16      │   │
-│   │  @nexuspos/shared  │   │   │     port 5432          │   │
+│   │  @ledgera/shared  │   │   │     port 5432          │   │
 │   │  Types + Constants │   │   └────────────────────────┘   │
 │   └────────────────────┘   │                                │
 └────────────────────────────┴────────────────────────────────┘
@@ -56,8 +56,8 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/nexuspos.git
-cd nexuspos
+git clone https://github.com/your-org/ledgera.git
+cd ledgera
 
 # 2. Install dependencies
 pnpm install
@@ -77,12 +77,12 @@ pnpm dev
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000/api/v1
 - **Health Check**: http://localhost:3000/api/v1/health
-- **pgAdmin**: http://localhost:5050 (admin@nexuspos.dev / admin)
+- **pgAdmin**: http://localhost:5050 (admin@ledgera.dev / admin)
 
 ## Project Structure
 
 ```
-nexuspos/
+ledgera/
 ├── apps/
 │   ├── backend/                  # NestJS REST API
 │   │   ├── prisma/
@@ -105,7 +105,7 @@ nexuspos/
 │           └── App.tsx          # Root component
 │
 ├── packages/
-│   └── shared/                   # @nexuspos/shared
+│   └── shared/                   # @ledgera/shared
 │       └── src/
 │           ├── types/           # ApiResponse, PaginatedResponse, etc.
 │           └── constants/       # APP, PAGINATION, Status enum

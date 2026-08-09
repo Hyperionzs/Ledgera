@@ -1,6 +1,6 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
-import { ApiResponse } from '@nexuspos/shared';
+import { ApiResponse } from '@ledgera/shared';
 
 /**
  * Wraps every successful handler result in the shared ApiResponse<T> shape:

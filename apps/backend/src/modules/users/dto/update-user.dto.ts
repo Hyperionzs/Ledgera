@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { Role } from '@nexuspos/shared';
+import { Role } from '@ledgera/shared';
 
 export class UpdateUserDto {
   @IsOptional()

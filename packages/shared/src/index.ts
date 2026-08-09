@@ -1,5 +1,5 @@
 // ============================================================================
-// NexusPOS — Shared Types
+// Ledgera — Shared Types
 // Re-exports all shared types, constants, and utilities
 // ============================================================================
 

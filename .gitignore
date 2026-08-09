@@ -48,3 +48,6 @@ apps/backend/prisma/migrations/*.sql.bak
 .cache/
 tmp/
 temp/
+
+# Claude
+CLAUDE.md

@@ -1,5 +1,5 @@
 # ============================================================================
-# NexusPOS Frontend — Multi-stage Dockerfile
+# Ledgera Frontend — Multi-stage Dockerfile
 # Stage 1: Build the Vite app
 # Stage 2: Serve with Nginx
 # ============================================================================

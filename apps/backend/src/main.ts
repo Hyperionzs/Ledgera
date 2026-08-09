@@ -33,7 +33,7 @@ async function bootstrap() {
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
 
-  logger.log(`🚀 NexusPOS API running on http://localhost:${port}/api/v1`);
+  logger.log(`🚀 Ledgera API running on http://localhost:${port}/api/v1`);
   logger.log(`📋 Health check: http://localhost:${port}/api/v1/health`);
   logger.log(`🌍 Environment: ${configService.get<string>('NODE_ENV', 'development')}`);
 }

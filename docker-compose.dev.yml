@@ -1,5 +1,5 @@
 # ============================================================================
-# NexusPOS — Docker Compose Development Override
+# Ledgera — Docker Compose Development Override
 # ============================================================================
 # Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
@@ -18,10 +18,10 @@ services:
   # --------------------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: nexuspos-pgadmin
+    container_name: ledgera-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@nexuspos.dev
+      PGADMIN_DEFAULT_EMAIL: admin@ledgera.dev
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:

@@ -1,5 +1,5 @@
 // ============================================================================
-// NexusPOS — ESLint Flat Config (v9+)
+// Ledgera — ESLint Flat Config (v9+)
 // Single config at the root, applies to all workspace packages
 // ============================================================================
 

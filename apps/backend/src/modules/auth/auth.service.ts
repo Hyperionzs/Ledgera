@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { SignOptions } from 'jsonwebtoken';
-import { Role } from '@nexuspos/shared';
+import { Role } from '@ledgera/shared';
 import { Role as PrismaRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { HashService } from './hash.service';

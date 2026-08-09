@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
-import { APP } from '@nexuspos/shared';
-import type { HealthCheckResponse } from '@nexuspos/shared';
+import { APP } from '@ledgera/shared';
+import type { HealthCheckResponse } from '@ledgera/shared';
 import { Public } from '@/common/decorators/public.decorator';
 
 @Controller('health')

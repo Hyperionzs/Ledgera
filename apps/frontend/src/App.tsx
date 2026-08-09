@@ -1,5 +1,5 @@
 import { QueryProvider } from '@/providers/query-provider';
-import { APP } from '@nexuspos/shared';
+import { APP } from '@ledgera/shared';
 
 export function App() {
   return (

@@ -1,5 +1,5 @@
 # ============================================================================
-# NexusPOS Backend — Multi-stage Dockerfile
+# Ledgera Backend — Multi-stage Dockerfile
 # Stage 1: Install dependencies
 # Stage 2: Build application
 # Stage 3: Production runtime (minimal image)

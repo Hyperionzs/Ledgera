@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { Role } from '@nexuspos/shared';
+import { Role } from '@ledgera/shared';
 
 export interface AuthUser {
   userId: string;

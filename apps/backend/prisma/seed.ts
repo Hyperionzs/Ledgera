@@ -9,20 +9,20 @@ async function main() {
   const adminPassword = await bcrypt.hash('admin123', 10);
 
   await prisma.user.upsert({
-    where: { email: 'admin@nexuspos.dev' },
+    where: { email: 'admin@ledgera.dev' },
     update: {
       passwordHash: adminPassword,
       role: Role.OWNER,
     },
     create: {
-      email: 'admin@nexuspos.dev',
-      name: 'NexusPOS Admin',
+      email: 'admin@ledgera.dev',
+      name: 'Ledgera Admin',
       passwordHash: adminPassword,
       role: Role.OWNER,
     },
   });
 
-  console.log('✅ Seeded admin user: admin@nexuspos.dev / admin123 (OWNER)');
+  console.log('✅ Seeded admin user: admin@ledgera.dev / admin123 (OWNER)');
   console.log('🌱 Database seed completed.');
 }
 
