@@ -72,7 +72,37 @@ Error:
 - `PATCH /suppliers/:id/status` `{ isActive: boolean }`
 - `DELETE /suppliers/:id` (soft)
 
+### Inventory (write: ADMIN/OWNER, read: any)
+
+- `GET /inventory?page=1&limit=20&search=` — products with current stock + category + supplier (dashboard-ready)
+- `GET /inventory/:productId` — detail + movement history (newest first)
+- `POST /inventory/stock-in` `{ productId, quantity, reason?, referenceType?, referenceId? }`
+- `POST /inventory/stock-out` `{ productId, quantity, reason?, referenceType?, referenceId? }`
+- `POST /inventory/adjust` `{ productId, newStock, reason, referenceType?, referenceId? }` — reason required
+
+All mutations are atomic: movement row + product stock change commit together in one
+transaction. `StockMovement.type`: `STOCK_IN | STOCK_OUT | ADJUSTMENT`. `quantity` is always
+positive; ADJUSTMENT stores `|after - before|`. `referenceType`/`referenceId` are
+reserved for Purchase (`PURCHASE`) / Sales (`SALE`).
+
 ## Common error codes
+
+| Code                               | Meaning                                     |
+| ---------------------------------- | ------------------------------------------- |
+| `UNAUTHORIZED`                     | bad/missing token, invalid credentials      |
+| `INVALID_CREDENTIALS`              | wrong email/password                        |
+| `FORBIDDEN`                        | role insufficient                           |
+| `NOT_FOUND` / `CATEGORY_NOT_FOUND` | resource missing or soft-deleted            |
+| `SKU_TAKEN` / `BARCODE_TAKEN`      | unique constraint hit                       |
+| `PRICE_INVALID`                    | selling price below purchase price          |
+| `CATEGORY_NAME_TAKEN`              | duplicate sibling name                      |
+| `CATEGORY_IN_USE`                  | delete blocked by product reference         |
+| `INVALID_PARENT`                   | parent missing/deleted/cycle                |
+| `SUPPLIER_NAME_TAKEN`              | duplicate active supplier name              |
+| `SUPPLIER_EMAIL_TAKEN`             | duplicate active supplier email             |
+| `SUPPLIER_NAME_REQUIRED`           | name blank after normalization              |
+| `PRODUCT_NOT_FOUND`                | product missing or soft-deleted (inventory) |
+| `INSUFFICIENT_STOCK`               | stock-out/adjust would drive stock negative |
 
 | Code                               | Meaning                                |
 | ---------------------------------- | -------------------------------------- |

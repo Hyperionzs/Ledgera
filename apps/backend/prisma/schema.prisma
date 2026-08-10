@@ -74,16 +74,22 @@ model Product {
   description   String?
   categoryId    String?  @map("category_id")
   category      Category? @relation(fields: [categoryId], references: [id])
+  supplierId    String?  @map("supplier_id")
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
   purchasePrice Decimal  @map("purchase_price") @db.Decimal(12, 2)
   sellingPrice  Decimal  @map("selling_price") @db.Decimal(12, 2)
   minimumStock  Int      @default(0) @map("minimum_stock")
+  stock         Int      @default(0)
   isActive      Boolean  @default(true) @map("is_active")
   deletedAt     DateTime? @map("deleted_at")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  movements StockMovement[]
+
   @@index([name])
   @@index([categoryId])
+  @@index([supplierId])
   @@index([isActive])
   @@map("products")
 }
@@ -116,6 +122,17 @@ model Category {
 }
 
 // ---------------------------------------------------------------------------
+// MovementType — direction of a stock change. ADJUSTMENT is a manual correction
+// (e.g. broken, expired, cycle count) and always requires a reason.
+// STOCK_IN / STOCK_OUT are typically tied to Purchase / Sale via reference.
+// ---------------------------------------------------------------------------
+enum MovementType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+}
+
+// ---------------------------------------------------------------------------
 // Supplier — vendor that supplies products. No unique DB constraint on name or
 // email: Postgres treats NULL as distinct, and soft-deleted suppliers may reuse
 // both. Uniqueness (among active suppliers) is enforced in the service layer.
@@ -132,8 +149,34 @@ model Supplier {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  products Product[]
+
   @@index([name])
   @@index([email])
   @@index([isActive])
   @@map("suppliers")
+}
+
+// ---------------------------------------------------------------------------
+// StockMovement — immutable audit trail of every stock change.
+// quantity is always positive; direction is implied by type, and before/after
+// snapshots make the delta explicit without re-deriving from history.
+// ADJUSTMENT stores |after - before| in quantity; reason is mandatory for it.
+// ---------------------------------------------------------------------------
+model StockMovement {
+  id            String       @id @default(uuid())
+  productId     String       @map("product_id")
+  product       Product      @relation(fields: [productId], references: [id])
+  type          MovementType
+  quantity      Int
+  beforeStock   Int          @map("before_stock")
+  afterStock    Int          @map("after_stock")
+  reason        String?
+  referenceType String?      @map("reference_type")
+  referenceId   String?      @map("reference_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([createdAt])
+  @@map("stock_movements")
 }

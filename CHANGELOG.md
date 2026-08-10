@@ -8,12 +8,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Planned
 
-- Inventory Transaction (stock adjustment, stock movement)
 - Purchase Module
 - Sales Module
 - Dashboard & Analytics
 - Frontend Integration
 - Deployment + CI/CD
+
+---
+
+## [v0.6.0] - 2026-08-10
+
+### Added
+
+- Inventory Management module: hybrid model `Product.stock` (current) + `StockMovement` (audit trail lengkap) + enum `MovementType`, 3 endpoint tulis (`POST stock-in`, `stock-out`, `adjust`) + 2 baca (`GET /inventory`, `GET /inventory/:productId`).
+- Mutasi stok atomik: semua operasi di dalam `prisma.$transaction` — insert movement + update `Product.stock` all-or-nothing; `increment`/`decrement` atomic (kebal lost update).
+- `beforeStock`/`afterStock` snapshot di tiap movement — riwayat terbaca tanpa menghitung ulang; `quantity` selalu positif (ADJUSTMENT menyimpan `|delta|`).
+- Cegah stok negatif via `INSUFFICIENT_STOCK` (400); ADJUSTMENT wajib `reason`; ADJUSTMENT diset ke nilai absolut target.
+- `referenceType`/`referenceId` nullable pada movement — siap diisi Purchase (`PURCHASE`) / Sales (`SALE`) tanpa perubahan skema.
+- Relasi `Product.supplierId` (nullable) + daftar inventory menampilkan kategori & supplier — dashboard tanpa join tambahan.
+- 22 end-to-end test inventory; total 125 test backend pass.
+
+### Changed
+
+- `Product` menambah kolom `stock` (default 0) dan relasi `supplierId`.
+- Skema menambah enum `MovementType`, model `StockMovement`, index `[productId]` dan `[createdAt]`.
+
+### Fixed
+
+### Notes
+
+- Tech debt terdokumentasi: race window pada mutasi stok bersamaan (Prisma belum punya `SELECT ... FOR UPDATE` native) — MVP andalkan transaction + atomic update; production pertimbangkan pessimistic/optimistic locking + retry.
 
 ---
 
