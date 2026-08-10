@@ -6,11 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Planned
+
+- Supplier Management
+- Inventory Transaction (stock adjustment, stock movement)
+- Purchase Module
+- Sales Module
+- Dashboard & Analytics
+- Frontend Integration
+- Deployment + CI/CD
+
+---
+
+## [v0.4.0] - 2026-08-10
+
 ### Added
+
+- Category Management module: `Category` model (nama unik per-parent, hierarki parent/child via self-relation).
+- 6 endpoint REST kategori (`POST/GET/GET:id/PATCH/PATCH:id/status/DELETE`) dengan RBAC (ADMIN/OWNER tulis, CASHIER baca).
+- Soft delete hierarkis: hapus kategori = cascade ke semua turunannya; diblokir jika masih dipakai produk (`CATEGORY_IN_USE`).
+- Validasi parent: parent harus ada & aktif, tidak boleh jadi keturunannya sendiri (cycle guard), pindah ke root via `parentId: null`.
+- Dokumentasi awal: `docs/` (architecture, database, api, branching, deployment).
 
 ### Changed
 
+- Relasi `Product.categoryId` kini FK ke `Category` (sebelumnya nullable tanpa relasi).
+- Skema menambah `@@index([categoryId])` pada Product.
+
 ### Fixed
+
+- Test fixture email pada kategori dipaksa lowercase — login memakai `email.toLowerCase()` dan Postgres case-sensitive.
 
 ---
 
