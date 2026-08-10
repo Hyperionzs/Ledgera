@@ -129,19 +129,43 @@ export class InventoryService {
       if (!product) throw new NotFoundException('PRODUCT_NOT_FOUND');
 
       const beforeStock = product.stock;
-      const afterStock =
-        type === 'STOCK_IN'
-          ? beforeStock + quantity
-          : type === 'STOCK_OUT'
-            ? beforeStock - quantity
-            : quantity; // ADJUSTMENT: absolute target
+      let afterStock: number;
+      let movementQty = quantity;
 
-      if (afterStock < 0) {
-        throw new BadRequestException('INSUFFICIENT_STOCK');
+      if (type === 'STOCK_OUT') {
+        // Atomic conditional decrease — the DB decides whether enough stock
+        // exists, so two concurrent stock-outs cannot both pass (only one row
+        // matches stock >= quantity). This replaces check-then-act, which had
+        // a race window that could drive stock negative.
+        const res = await tx.product.updateMany({
+          where: { id: productId, stock: { gte: quantity } },
+          data: { stock: { decrement: quantity } },
+        });
+        if (res.count === 0) throw new BadRequestException('INSUFFICIENT_STOCK');
+        const after = await tx.product.findUnique({
+          where: { id: productId },
+          select: { stock: true },
+        });
+        // row exists (the updateMany above matched it), so stock is defined
+        afterStock = after?.stock ?? 0;
+      } else if (type === 'STOCK_IN') {
+        // increment is monotonic — no guard needed, read back actual value.
+        const updated = await tx.product.update({
+          where: { id: productId },
+          data: { stock: { increment: quantity } },
+          select: { stock: true },
+        });
+        afterStock = updated.stock;
+      } else {
+        // ADJUSTMENT — absolute set to target (quantity param = newStock).
+        // Can never go negative (DTO @Min(0)); delta is |after - before|.
+        afterStock = quantity;
+        movementQty = Math.abs(afterStock - beforeStock);
+        await tx.product.update({
+          where: { id: productId },
+          data: { stock: afterStock },
+        });
       }
-
-      // quantity is always positive: for ADJUSTMENT it's |after - before|.
-      const movementQty = type === 'ADJUSTMENT' ? Math.abs(afterStock - beforeStock) : quantity;
 
       await tx.stockMovement.create({
         data: {
@@ -156,25 +180,12 @@ export class InventoryService {
         },
       });
 
-      const updated = await tx.product.update({
-        where: { id: productId },
-        data: {
-          stock:
-            type === 'STOCK_IN'
-              ? { increment: quantity }
-              : type === 'STOCK_OUT'
-                ? { decrement: quantity }
-                : afterStock, // ADJUSTMENT is an absolute set
-        },
-        select: { id: true, stock: true },
-      });
-
       return {
         productId,
         type,
         beforeStock,
         afterStock,
-        stock: updated.stock,
+        stock: afterStock,
         reason: reason ?? null,
       };
     });

@@ -131,6 +131,27 @@ describe('InventoryModule (e2e)', () => {
       await stockIn(p.id, -5).expect(400);
     });
 
+    it('string quantity is rejected (no implicit conversion)', async () => {
+      const p = await createProduct('String Qty');
+      await request(app.getHttpServer())
+        .post('/api/v1/inventory/stock-in')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ productId: p.id, quantity: '10' })
+        .expect(400);
+    });
+
+    it('stores reason on stock-in movement', async () => {
+      const p = await createProduct('Reasoned');
+      await stockIn(p.id, 10, { reason: 'Initial stock' }).expect(201);
+      const mv = await prisma.stockMovement.findFirst({ where: { productId: p.id } });
+      expect(mv?.reason).toBe('Initial stock');
+    });
+
+    it('extra unknown field is rejected (forbidNonWhitelisted)', async () => {
+      const p = await createProduct('Extra Field');
+      await stockIn(p.id, 5, { hackerField: 'x' } as never).expect(400);
+    });
+
     it('stores referenceType and referenceId when provided', async () => {
       const p = await createProduct('Referenced');
       const res = await stockIn(p.id, 10, {
@@ -256,6 +277,31 @@ describe('InventoryModule (e2e)', () => {
         .set('Authorization', `Bearer ${cashierToken}`)
         .send({ productId: p.id, quantity: 5 })
         .expect(403);
+    });
+
+    it('CASHIER cannot stock-out', async () => {
+      const p = await createProduct('Cashier Out');
+      await request(app.getHttpServer())
+        .post('/api/v1/inventory/stock-out')
+        .set('Authorization', `Bearer ${cashierToken}`)
+        .send({ productId: p.id, quantity: 5 })
+        .expect(403);
+    });
+
+    it('CASHIER cannot adjust', async () => {
+      const p = await createProduct('Cashier Adjust');
+      await request(app.getHttpServer())
+        .post('/api/v1/inventory/adjust')
+        .set('Authorization', `Bearer ${cashierToken}`)
+        .send({ productId: p.id, newStock: 5, reason: 'x' })
+        .expect(403);
+    });
+
+    it('stock manipulation without token returns 401', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/inventory/stock-in')
+        .send({ productId: '00000000-0000-0000-0000-000000000000', quantity: 5 })
+        .expect(401);
     });
 
     it('CASHIER can read inventory list', async () => {

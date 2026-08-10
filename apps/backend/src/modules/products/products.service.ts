@@ -159,6 +159,7 @@ export class ProductsService {
     purchasePrice: true,
     sellingPrice: true,
     minimumStock: true,
+    stock: true,
     isActive: true,
     createdAt: true,
     updatedAt: true,
