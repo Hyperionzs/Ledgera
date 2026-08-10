@@ -16,8 +16,8 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "jest --runInBand --testTimeout=30000",
+    "test:watch": "jest --watch --runInBand --testTimeout=30000"
   },
   "jest": {
     "moduleFileExtensions": [
