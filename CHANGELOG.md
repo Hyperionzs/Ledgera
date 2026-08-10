@@ -8,13 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Planned
 
-- Supplier Management
 - Inventory Transaction (stock adjustment, stock movement)
 - Purchase Module
 - Sales Module
 - Dashboard & Analytics
 - Frontend Integration
 - Deployment + CI/CD
+
+---
+
+## [v0.5.0] - 2026-08-10
+
+### Added
+
+- Supplier Management module: `Supplier` model + 6 endpoint REST (`POST/GET/GET:id/PATCH/PATCH:id/status/DELETE`) dengan RBAC (ADMIN/OWNER tulis, CASHIER baca).
+- Normalisasi data bebas teks: trim + collapse spasi pada `name`/`contactName`/`phone`/`address`; `email` disimpan lowercase.
+- Uniqueness di service (bukan constraint DB): `name` unik antar supplier aktif (case-/whitespace-insensitive), `email` unik bila diisi; keduanya boleh dipakai ulang setelah soft delete.
+- Filter `isActive` pada list endpoint + search `name`/`contactName`.
+- 32 end-to-end test supplier; total 103 test backend pass.
+
+### Changed
+
+- `docs/` diperbarui (api + database) mencakup modul supplier.
+
+### Fixed
+
+- Query boolean `isActive=false` tadinya salah parse (class-transformer `Boolean('false')` → `true`); kini transform custom menangani `'true'/'false'/'1'/'0'`.
+- Nama kosong setelah normalisasi (`'   '`) tadinya 500; kini ditolak `SUPPLIER_NAME_REQUIRED` (400).
 
 ---
 

@@ -11,6 +11,7 @@ PostgreSQL (local dev via docker-compose). Single source of truth:
 | `RefreshToken` | Active session + token rotation | `tokenHash @unique` (sha256 of raw token)                                               |
 | `Product`      | Catalog item                    | `sku @unique`, `barcode @unique?`, prices `Decimal(12,2)`, `categoryId` FK → `Category` |
 | `Category`     | Hierarchical grouping           | `@@unique([name, parentId])`, self-relation tree                                        |
+| `Supplier`     | Vendor                          | no unique constraint on name/email (enforced in service among active rows)              |
 
 ## Conventions
 
@@ -21,7 +22,14 @@ PostgreSQL (local dev via docker-compose). Single source of truth:
 ## Case-sensitivity warning
 
 Postgres string comparison is case-sensitive. The auth login lowercases the
-email before lookup, so **fixtures/emails must be stored lowercase**.
+email before lookup, so **fixtures/emails must be stored lowercase**. Supplier
+emails are normalized (trim + lowercase) at the service layer before storage.
+
+## Normalization
+
+Free-text fields (`name`, `contactName`, `phone`, `address`) are trimmed and
+inner whitespace is collapsed to a single space. Name uniqueness compares the
+normalized form case-insensitively.
 
 ## Unique + soft delete nuance
 
