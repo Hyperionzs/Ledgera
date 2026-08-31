@@ -95,99 +95,122 @@ export class InventoryService {
     return { ...product, movements };
   }
 
+  /** Receive stock on an existing transaction — used by the Purchase module
+   *  so PO creation and stock-in commit/rollback together (one transaction). */
+  stockInTx(
+    tx: Prisma.TransactionClient,
+    params: {
+      productId: string;
+      quantity: number;
+      reason?: string;
+      referenceType?: string;
+      referenceId?: string;
+    },
+  ) {
+    return this.mutateTx(tx, params.productId, 'STOCK_IN', params.quantity, params.reason, {
+      referenceType: params.referenceType,
+      referenceId: params.referenceId,
+    });
+  }
+
   /** Receive stock. Movement row first, then atomic increment. */
   async stockIn(dto: StockInDto) {
-    return this.mutate(dto.productId, 'STOCK_IN', dto.quantity, dto.reason, dto);
+    return this.prisma.$transaction((tx) =>
+      this.mutateTx(tx, dto.productId, 'STOCK_IN', dto.quantity, dto.reason, dto),
+    );
   }
 
   /** Issue stock. Negative stock is blocked (INSUFFICIENT_STOCK). */
   async stockOut(dto: StockOutDto) {
-    return this.mutate(dto.productId, 'STOCK_OUT', dto.quantity, dto.reason, dto);
+    return this.prisma.$transaction((tx) =>
+      this.mutateTx(tx, dto.productId, 'STOCK_OUT', dto.quantity, dto.reason, dto),
+    );
   }
 
   /** Set stock to an absolute value. reason is mandatory. */
   async adjust(dto: AdjustStockDto) {
-    return this.mutate(dto.productId, 'ADJUSTMENT', dto.newStock, dto.reason, dto);
+    return this.prisma.$transaction((tx) =>
+      this.mutateTx(tx, dto.productId, 'ADJUSTMENT', dto.newStock, dto.reason, dto),
+    );
   }
 
   // ---------------------------------------------------------------------------
   // Core mutation — one transaction, atomic stock change, full audit trail
   // ---------------------------------------------------------------------------
 
-  private async mutate(
+  private async mutateTx(
+    tx: Prisma.TransactionClient,
     productId: string,
     type: MovementType,
     quantity: number,
     reason: string | undefined,
     dto: { referenceType?: string; referenceId?: string },
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const product = await tx.product.findFirst({
-        where: { id: productId, deletedAt: null },
-        select: { id: true, stock: true },
+    const product = await tx.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: { id: true, stock: true },
+    });
+    if (!product) throw new NotFoundException('PRODUCT_NOT_FOUND');
+
+    const beforeStock = product.stock;
+    let afterStock: number;
+    let movementQty = quantity;
+
+    if (type === 'STOCK_OUT') {
+      // Atomic conditional decrease — the DB decides whether enough stock
+      // exists, so two concurrent stock-outs cannot both pass (only one row
+      // matches stock >= quantity). This replaces check-then-act, which had
+      // a race window that could drive stock negative.
+      const res = await tx.product.updateMany({
+        where: { id: productId, stock: { gte: quantity } },
+        data: { stock: { decrement: quantity } },
       });
-      if (!product) throw new NotFoundException('PRODUCT_NOT_FOUND');
-
-      const beforeStock = product.stock;
-      let afterStock: number;
-      let movementQty = quantity;
-
-      if (type === 'STOCK_OUT') {
-        // Atomic conditional decrease — the DB decides whether enough stock
-        // exists, so two concurrent stock-outs cannot both pass (only one row
-        // matches stock >= quantity). This replaces check-then-act, which had
-        // a race window that could drive stock negative.
-        const res = await tx.product.updateMany({
-          where: { id: productId, stock: { gte: quantity } },
-          data: { stock: { decrement: quantity } },
-        });
-        if (res.count === 0) throw new BadRequestException('INSUFFICIENT_STOCK');
-        const after = await tx.product.findUnique({
-          where: { id: productId },
-          select: { stock: true },
-        });
-        // row exists (the updateMany above matched it), so stock is defined
-        afterStock = after?.stock ?? 0;
-      } else if (type === 'STOCK_IN') {
-        // increment is monotonic — no guard needed, read back actual value.
-        const updated = await tx.product.update({
-          where: { id: productId },
-          data: { stock: { increment: quantity } },
-          select: { stock: true },
-        });
-        afterStock = updated.stock;
-      } else {
-        // ADJUSTMENT — absolute set to target (quantity param = newStock).
-        // Can never go negative (DTO @Min(0)); delta is |after - before|.
-        afterStock = quantity;
-        movementQty = Math.abs(afterStock - beforeStock);
-        await tx.product.update({
-          where: { id: productId },
-          data: { stock: afterStock },
-        });
-      }
-
-      await tx.stockMovement.create({
-        data: {
-          productId,
-          type,
-          quantity: movementQty,
-          beforeStock,
-          afterStock,
-          reason: reason ?? null,
-          referenceType: dto.referenceType ?? null,
-          referenceId: dto.referenceId ?? null,
-        },
+      if (res.count === 0) throw new BadRequestException('INSUFFICIENT_STOCK');
+      const after = await tx.product.findUnique({
+        where: { id: productId },
+        select: { stock: true },
       });
+      // row exists (the updateMany above matched it), so stock is defined
+      afterStock = after?.stock ?? 0;
+    } else if (type === 'STOCK_IN') {
+      // increment is monotonic — no guard needed, read back actual value.
+      const updated = await tx.product.update({
+        where: { id: productId },
+        data: { stock: { increment: quantity } },
+        select: { stock: true },
+      });
+      afterStock = updated.stock;
+    } else {
+      // ADJUSTMENT — absolute set to target (quantity param = newStock).
+      // Can never go negative (DTO @Min(0)); delta is |after - before|.
+      afterStock = quantity;
+      movementQty = Math.abs(afterStock - beforeStock);
+      await tx.product.update({
+        where: { id: productId },
+        data: { stock: afterStock },
+      });
+    }
 
-      return {
+    await tx.stockMovement.create({
+      data: {
         productId,
         type,
+        quantity: movementQty,
         beforeStock,
         afterStock,
-        stock: afterStock,
         reason: reason ?? null,
-      };
+        referenceType: dto.referenceType ?? null,
+        referenceId: dto.referenceId ?? null,
+      },
     });
+
+    return {
+      productId,
+      type,
+      beforeStock,
+      afterStock,
+      stock: afterStock,
+      reason: reason ?? null,
+    };
   }
 }

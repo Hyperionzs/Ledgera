@@ -86,6 +86,7 @@ model Product {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   movements StockMovement[]
+  purchaseItems PurchaseItem[]
 
   @@index([name])
   @@index([categoryId])
@@ -150,6 +151,7 @@ model Supplier {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   products Product[]
+  purchases Purchase[]
 
   @@index([name])
   @@index([email])
@@ -179,4 +181,55 @@ model StockMovement {
   @@index([productId])
   @@index([createdAt])
   @@map("stock_movements")
+}
+
+// ---------------------------------------------------------------------------
+// PurchaseStatus — life cycle of a purchase order. MVP creates directly as
+// RECEIVED (goods already arrived ⇒ stock-in immediately). DRAFT / CANCELLED
+// pipelines are future work.
+// ---------------------------------------------------------------------------
+enum PurchaseStatus {
+  RECEIVED
+}
+
+// ---------------------------------------------------------------------------
+// Purchase — a received shipment from a supplier. Created atomically with its
+// items and the resulting stock-in movements (one transaction). supplierName
+// is a snapshot so history stays accurate when the supplier master changes.
+// ---------------------------------------------------------------------------
+model Purchase {
+  id           String         @id @default(uuid())
+  referenceNo  String         @map("reference_no")
+  supplierId   String?        @map("supplier_id")
+  supplier     Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplierName String         @map("supplier_name")
+  status       PurchaseStatus @default(RECEIVED)
+  notes        String?
+  totalAmount  Decimal        @map("total_amount") @db.Decimal(14, 2)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  items PurchaseItem[]
+
+  @@index([supplierId])
+  @@map("purchases")
+}
+
+// ---------------------------------------------------------------------------
+// PurchaseItem — one line of a purchase. productName is a snapshot. unitPrice
+// and totalAmount are denormalized at creation, never recomputed.
+// ---------------------------------------------------------------------------
+model PurchaseItem {
+  id          String   @id @default(uuid())
+  purchaseId  String   @map("purchase_id")
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId   String   @map("product_id")
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String   @map("product_name")
+  quantity    Int
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(12, 2)
+  totalAmount Decimal  @map("total_amount") @db.Decimal(14, 2)
+
+  @@index([purchaseId])
+  @@index([productId])
+  @@map("purchase_items")
 }
