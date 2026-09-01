@@ -113,6 +113,25 @@ export class InventoryService {
     });
   }
 
+  /** Issue stock on an existing transaction — used by the Sales module
+   *  so Sale creation and stock-out commit/rollback together (one transaction).
+   *  Throws INSUFFICIENT_STOCK if stock would go negative. */
+  stockOutTx(
+    tx: Prisma.TransactionClient,
+    params: {
+      productId: string;
+      quantity: number;
+      reason?: string;
+      referenceType?: string;
+      referenceId?: string;
+    },
+  ) {
+    return this.mutateTx(tx, params.productId, 'STOCK_OUT', params.quantity, params.reason, {
+      referenceType: params.referenceType,
+      referenceId: params.referenceId,
+    });
+  }
+
   /** Receive stock. Movement row first, then atomic increment. */
   async stockIn(dto: StockInDto) {
     return this.prisma.$transaction((tx) =>

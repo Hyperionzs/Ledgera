@@ -87,6 +87,7 @@ model Product {
 
   movements StockMovement[]
   purchaseItems PurchaseItem[]
+  saleItems SaleItem[]
 
   @@index([name])
   @@index([categoryId])
@@ -232,4 +233,55 @@ model PurchaseItem {
   @@index([purchaseId])
   @@index([productId])
   @@map("purchase_items")
+}
+
+// ---------------------------------------------------------------------------
+// SaleStatus — life cycle of a sale. MVP creates directly as COMPLETED
+// (cash sale recorded immediately). DRAFT / CANCELLED pipelines are future work.
+// ---------------------------------------------------------------------------
+enum SaleStatus {
+  COMPLETED
+}
+
+// ---------------------------------------------------------------------------
+// Sale — a completed sale transaction. customerId is optional for walk-in
+// customers. customerName is recorded at sale time. totalAmount is denormalized
+// for quick reporting and never recomputed.
+// ---------------------------------------------------------------------------
+model Sale {
+  id           String      @id @default(uuid())
+  referenceNo  String      @map("reference_no")
+  customerId   String?     @map("customer_id")
+  customerName String      @map("customer_name")
+  status       SaleStatus  @default(COMPLETED)
+  notes        String?
+  totalAmount  Decimal     @map("total_amount") @db.Decimal(14, 2)
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  items SaleItem[]
+
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("sales")
+}
+
+// ---------------------------------------------------------------------------
+// SaleItem — one line of a sale. productName is a snapshot captured at
+// sale time so history remains accurate when the product master changes.
+// unitPrice and totalAmount are denormalized at creation, never recomputed.
+// ---------------------------------------------------------------------------
+model SaleItem {
+  id          String   @id @default(uuid())
+  saleId      String   @map("sale_id")
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   String   @map("product_id")
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String   @map("product_name")
+  quantity    Int
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(12, 2)
+  totalAmount Decimal  @map("total_amount") @db.Decimal(14, 2)
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
 }
