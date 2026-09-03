@@ -31,8 +31,13 @@ export class SalesService {
    * Create a new completed sale transaction atomically.
    *
    * Entire flow happens in one $transaction so that if any step fails
-   * (product not found, insufficient stock), the entire sale and its
-   * stock movements roll back.
+   * (customer not found, product not found, insufficient stock), the entire
+   * sale and its stock movements roll back.
+   *
+   * Customer resolution:
+   * - If customerId provided: fetch from db, verify exists + isActive + not deleted
+   * - If customerId NOT provided: use Walk-in sentinel UUID
+   * - Always snapshot the resolved customerName at creation time
    */
   async create(dto: CreateSaleDto) {
     return this.prisma.$transaction(async (tx) => {
@@ -47,7 +52,55 @@ export class SalesService {
         throw new BadRequestException('Duplicate productId in items');
       }
 
-      // Step 2: Validate products exist, capture names & prices
+      // Step 2: Resolve customer and capture snapshot
+      const WALK_IN_UUID = '00000000-0000-0000-0000-000000000000';
+      let resolvedCustomerId: string;
+      let resolvedCustomerName: string;
+
+      if (dto.customerId) {
+        // Fetch customer from db, verify exists, isActive, not deleted
+        const customer = await tx.customer.findFirst({
+          where: {
+            id: dto.customerId,
+            isActive: true,
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        });
+
+        if (!customer) {
+          throw new NotFoundException('CUSTOMER_NOT_FOUND');
+        }
+
+        resolvedCustomerId = customer.id;
+        resolvedCustomerName = customer.name;
+      } else {
+        // No customer provided: use Walk-in sentinel
+        // Ensure walk-in customer exists in database (upsert within transaction)
+        await tx.customer.upsert({
+          where: { id: WALK_IN_UUID },
+          update: { isActive: true, deletedAt: null },
+          create: {
+            id: WALK_IN_UUID,
+            name: 'Walk-in',
+            email: null,
+            phone: null,
+            address: null,
+            city: null,
+            notes: null,
+            isActive: true,
+            deletedAt: null,
+          },
+        });
+
+        resolvedCustomerId = WALK_IN_UUID;
+        resolvedCustomerName = 'Walk-in';
+      }
+
+      // Step 3: Validate products exist, capture names & prices
       const productNames = new Map<string, string>();
       const sellingPrices = new Map<string, Prisma.Decimal>();
 
@@ -73,7 +126,7 @@ export class SalesService {
         sellingPrices.set(product.id, product.sellingPrice);
       }
 
-      // Step 3: Calculate totalAmount server-side using Prisma.Decimal
+      // Step 4: Calculate totalAmount server-side using Prisma.Decimal
       let totalAmount = new Prisma.Decimal(0);
       for (const item of dto.items) {
         const sellingPrice = sellingPrices.get(item.productId)!;
@@ -81,12 +134,12 @@ export class SalesService {
         totalAmount = totalAmount.add(itemTotal);
       }
 
-      // Step 4: Create Sale header
+      // Step 5: Create Sale header with resolved customer
       const sale = await tx.sale.create({
         data: {
           referenceNo: this.generateReferenceNo(),
-          customerId: dto.customerId || null,
-          customerName: dto.customerName || 'Walk-in',
+          customerId: resolvedCustomerId,
+          customerName: resolvedCustomerName,
           notes: dto.notes || null,
           totalAmount,
           // Nested create: SaleItem records
@@ -106,7 +159,7 @@ export class SalesService {
         },
       });
 
-      // Step 5: For each item, decrement stock via stockOutTx (same transaction)
+      // Step 6: For each item, decrement stock via stockOutTx (same transaction)
       // If any stockOut fails (INSUFFICIENT_STOCK), exception bubbles & entire
       // $transaction rolls back (sale + items + stock movements).
       for (const item of dto.items) {
@@ -118,7 +171,7 @@ export class SalesService {
         });
       }
 
-      // Step 6: Query sale within transaction before return
+      // Step 7: Query sale within transaction before return
       const createdSale = await tx.sale.findUnique({
         where: { id: sale.id },
         include: {

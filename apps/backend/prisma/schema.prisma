@@ -236,6 +236,41 @@ model PurchaseItem {
 }
 
 // ---------------------------------------------------------------------------
+// Customer — buyer that makes purchases. Every sale must link to a customer,
+// either a registered customer or the special Walk-in sentinel. customerName
+// is a snapshot captured at sale time for immutable history.
+// deletedAt enables soft delete; deleted customers remain in sale history.
+// Email uniqueness is managed via a partial unique index in the database
+// (PostgreSQL: CREATE UNIQUE INDEX idx_customer_email_active ON customers(email)
+// WHERE is_active = true AND deleted_at IS NULL)
+// This allows deleted customers' emails to be reused.
+// ---------------------------------------------------------------------------
+model Customer {
+  id        String    @id @default(uuid())
+  name      String    @db.VarChar(100)  // required, indexed for search
+  email     String?   @db.VarChar(100)  // optional, unique only for active customers (see partial index)
+  phone     String?   @db.VarChar(20)  // optional, no unique constraint
+  address   String?   @db.VarChar(200)  // single address, optional
+  city      String?   @db.VarChar(100)  // optional
+  notes     String?   @db.VarChar(500)  // internal notes
+
+  // Lifecycle
+  isActive  Boolean   @default(true) @map("is_active")
+  deletedAt DateTime? @map("deleted_at")  // soft-delete
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  sales Sale[]
+
+  // Indexes for fast lookup
+  @@index([name])
+  @@index([phone])
+  @@index([isActive])
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------------
 // SaleStatus — life cycle of a sale. MVP creates directly as COMPLETED
 // (cash sale recorded immediately). DRAFT / CANCELLED pipelines are future work.
 // ---------------------------------------------------------------------------
@@ -244,15 +279,17 @@ enum SaleStatus {
 }
 
 // ---------------------------------------------------------------------------
-// Sale — a completed sale transaction. customerId is optional for walk-in
-// customers. customerName is recorded at sale time. totalAmount is denormalized
+// Sale — a completed sale transaction. customerId is required and links to
+// Customer (use sentinel Walk-in UUID for anonymous sales).
+// customerName is recorded at sale time as a snapshot. totalAmount is denormalized
 // for quick reporting and never recomputed.
 // ---------------------------------------------------------------------------
 model Sale {
   id           String      @id @default(uuid())
   referenceNo  String      @map("reference_no")
-  customerId   String?     @map("customer_id")
-  customerName String      @map("customer_name")
+  customerId   String      @map("customer_id")  // ← now required (links to Customer)
+  customer     Customer    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName String      @map("customer_name")  // ← snapshot at sale time
   status       SaleStatus  @default(COMPLETED)
   notes        String?
   totalAmount  Decimal     @map("total_amount") @db.Decimal(14, 2)
