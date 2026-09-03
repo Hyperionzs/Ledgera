@@ -8,11 +8,99 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Planned
 
-- Purchase Module
-- Sales Module
 - Dashboard & Analytics
 - Frontend Integration
 - Deployment + CI/CD
+
+---
+
+## [v0.9.0] - 2026-09-02
+
+### Added
+
+- Customer Management module: `Customer` model (name required, email/phone/address/city/notes optional) + 5 REST endpoint (`POST/GET/GET:id/PATCH/DELETE`) dengan RBAC (ADMIN/OWNER tulis, all authenticated baca).
+- Soft delete customer: `isActive` + `deletedAt` field, baris tetap tersimpan untuk sejarah.
+- Walk-in sentinel customer: UUID tetap `00000000-0000-0000-0000-000000000000`, protected dari deletion, digunakan untuk anonymous sales.
+- Customer snapshot pattern: `customerName` dicapture saat sale creation untuk immutable history, customer bisa dihapus tanpa merusak historical sales.
+- Sales integration: `Sale.customerId` kini required (always link ke Customer, walk-in untuk anonymous).
+- Pagination & search customer: limit/page/search case-insensitive pada name/email/phone.
+- Customer history API: GET `/customers/:id` includes sale history + purchase stats.
+- Email uniqueness via partial unique index: email unik hanya untuk active customer (`isActive=true AND deletedAt=null`), memungkinkan email reuse setelah soft delete.
+- 50 end-to-end test customer.
+
+### Changed
+
+- `Sale` model: `customerId` kini required (bukan nullable), FK relation ke `Customer` dengan `onDelete: SetNull`.
+- Skema menambah `Customer` model dengan soft-delete pattern dan indexes.
+
+### Fixed
+
+- Global email `@unique` constraint tadinya blocking soft-delete customer — diganti partial unique index di PostgreSQL.
+- Double-wrapped API response di controller — controller return langsung (interceptor handle wrapping).
+- Test data isolation: email/SKU generator lacked monotonic counter, diganti atomic counter per test.
+
+### Database
+
+- New model: `Customer` dengan soft-delete pattern.
+- New migration: Partial unique index on email (active customers only).
+- New seed: Walk-in sentinel customer initialization.
+
+---
+
+## [v0.8.0] - 2026-09-01
+
+### Added
+
+- Sales Management module: `Sale` & `SaleItem` model + 4 REST endpoint (`POST/GET/GET:id/DELETE`) dengan RBAC (ADMIN/OWNER tulis, all authenticated baca).
+- Atomic sale creation: semua operasi (validate items, fetch product, calculate total, create sale+items, stock-out) di dalam `prisma.$transaction` — all-or-nothing.
+- Server-side price calculation: `sellingPrice` diambil dari DB (bukan trust client), `totalAmount` computed menggunakan `Prisma.Decimal` untuk akurasi.
+- Product snapshot pattern: `productName` dicapture saat sale creation untuk immutable history.
+- Inactive/soft-deleted product blocking: cegah sale produk yg tidak aktif atau soft-deleted.
+- Stock-out atomik via InventoryService transaction: setiap sale item trigger `stockOutTx()` → decrement `Product.stock` + create `StockMovement` (SALE_OUT type).
+- `INSUFFICIENT_STOCK` error (400) jika stok tidak cukup; entire sale rolls back.
+- Referensi inventory movement: `StockMovement.referenceType='SALE'` + `referenceId` link ke sale.
+- 27 end-to-end test sales.
+
+### Changed
+
+- `Sale` model kini include `customer` relation (prepared untuk Customer module Sprint 9).
+- Skema menambah `Sale` & `SaleItem` model, enum `SaleStatus`.
+
+### Fixed
+
+### Database
+
+- New models: `Sale`, `SaleItem`.
+- New enum: `SaleStatus`.
+
+---
+
+## [v0.7.0] - 2026-08-31
+
+### Added
+
+- Purchase Management module: `Purchase` & `PurchaseItem` model + 4 REST endpoint (`POST/GET/GET:id/DELETE`) dengan RBAC (ADMIN/OWNER tulis, all authenticated baca).
+- Atomic purchase creation: supplier resolution, product validation, item snapshot, total calculation, purchase+items creation, stock-in — semua di `prisma.$transaction`.
+- Supplier integration: `Purchase.supplierId` (nullable) + supplier name snapshot (`supplierName`).
+- Product snapshot pattern: `productName` dicapture saat purchase creation untuk immutable history.
+- Atomic stock-in via InventoryService transaction: setiap purchase item trigger `stockInTx()` → increment `Product.stock` + create `StockMovement` (STOCK_IN type).
+- Referensi inventory movement: `StockMovement.referenceType='PURCHASE'` + `referenceId` link ke purchase.
+- Pagination & list purchase dengan supplier/date filtering.
+- 17 end-to-end test purchases.
+
+### Changed
+
+- `Purchase` model kini include `supplier` relation (nullable).
+- Skema menambah `Purchase` & `PurchaseItem` model, enum `PurchaseStatus`.
+- `StockMovement` menambah `referenceType`/`referenceId` untuk link ke transaksi asal.
+
+### Fixed
+
+### Database
+
+- New models: `Purchase`, `PurchaseItem`.
+- New enum: `PurchaseStatus`.
+- Schema update: `StockMovement.referenceType` & `referenceId`.
 
 ---
 
