@@ -19,22 +19,6 @@
     "test": "jest --runInBand --testTimeout=30000",
     "test:watch": "jest --watch --runInBand --testTimeout=30000"
   },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    },
-    "testEnvironment": "node"
-  },
   "dependencies": {
     "@ledgera/shared": "workspace:*",
     "@nestjs/common": "^11.1.0",

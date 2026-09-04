@@ -15,6 +15,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { PurchasesModule } from './modules/purchases/purchases.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -47,6 +48,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     PurchasesModule,
     SalesModule,
     CustomersModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
